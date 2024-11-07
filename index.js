@@ -118,7 +118,7 @@ io.on('connection', (socket) => {
 
         io.to(targetRoom).emit('userJoined', {
             id: socket.id,
-            nickname: nickname
+            nickname: limitedNickname
         });
     });
 

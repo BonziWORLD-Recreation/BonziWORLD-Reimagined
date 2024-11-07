@@ -7,7 +7,9 @@ app.use(express.static('public'));
 
 const rooms = new Map();
 const users = new Map();
-const DEFAULT_ROOM = 'default';
+const DEFAULT_ROOM = '';
+const MAX_NAME_LENGTH = 35;
+const MAX_MESSAGE_LENGTH = 400;
 
 // Handle commands
 function handleCommand(socket, message) {
@@ -19,23 +21,23 @@ function handleCommand(socket, message) {
 
     switch (command) {
         case 'name':
-            const newNickname = args.slice(1).join(' ').trim();
-            if (newNickname) {
-                const oldNickname = user.nickname;
-                user.nickname = newNickname;
-                io.to(user.roomId).emit('nameChanged', {
-                    id: socket.id,
-                    oldNickname: oldNickname,
-                    newNickname: newNickname
-                });
-                // Send system message about name change
-                io.to(user.roomId).emit('chat', {
-                    id: 'system',
-                    nickname: 'System',
-                    message: `${oldNickname} changed their name to ${newNickname}`
-                });
-            }
-            return true;
+    const newNickname = args.slice(1).join(' ').trim().substring(0, MAX_NAME_LENGTH);
+    if (newNickname) {
+        const oldNickname = user.nickname;
+        user.nickname = newNickname;
+        io.to(user.roomId).emit('nameChanged', {
+            id: socket.id,
+            oldNickname: oldNickname,
+            newNickname: newNickname
+        });
+        // Send system message about name change
+        io.to(user.roomId).emit('chat', {
+            id: 'system',
+            nickname: 'System',
+            message: `${oldNickname} changed their name to ${newNickname}`
+        });
+    }
+    return true;
 
         case 'help':
             // Send available commands to the user
@@ -77,13 +79,6 @@ function handleCommand(socket, message) {
 io.on('connection', (socket) => {
     console.log('User connected');
 
-    // Automatically assign users to the default room
-    socket.join(DEFAULT_ROOM);
-    users.set(socket.id, { 
-        nickname: `User${Math.floor(Math.random() * 1000)}`, 
-        roomId: DEFAULT_ROOM 
-    });
-
     if (!rooms.has(DEFAULT_ROOM)) {
         rooms.set(DEFAULT_ROOM, new Set());
     }
@@ -97,6 +92,7 @@ io.on('connection', (socket) => {
     socket.on('login', (data) => {
         const { nickname, roomId } = data;
         const targetRoom = roomId || DEFAULT_ROOM;
+        const limitedNickname = nickname.substring(0, MAX_NAME_LENGTH);
         
         // Leave current room
         const currentUser = users.get(socket.id);
@@ -112,7 +108,7 @@ io.on('connection', (socket) => {
         }
 
         // Join new room
-        users.set(socket.id, { nickname, roomId: targetRoom });
+        users.set(socket.id, { nickname: limitedNickname, roomId: targetRoom });
         socket.join(targetRoom);
 
         if (!rooms.has(targetRoom)) {

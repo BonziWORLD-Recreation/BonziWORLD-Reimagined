@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>BonziWORLD</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://code.createjs.com/1.0.0/createjs.min.js"></script>
+</head>
+<body>
+    <div id="boot-screen">
+        test
+    </div>
+
+    <style>
+        body {
+            background-image: url('https://static.miraheze.org/windowswallpaperwiki/c/cf/Bliss.jpg'); /* Path to your Windows XP background image */
+            background-size: cover;
+            font-family: 'Tahoma', sans-serif;
+            color: #000;
+        }
+        
+        #taskbar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background-color: #0054E3;
+            display: flex;
+            align-items: center;
+            padding: 5px;
+        }
+
+        /* Chat input container styling */
+        #chat-input-container {
+            flex-grow: 1;
+            margin-left: 10px;
+        }
+
+        #chat-input {
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            width: 70%;
+        }
+
+        #send-chat {
+            padding: 5px 10px;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        
+        #welcome-window {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #ECE9D8;
+            border: 1px solid #0054E3;
+            border-radius: 3px;
+            padding: 2px;
+            width: 300px;
+            box-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .window-title {
+            background: linear-gradient(to right, #0054E3, #2787F5);
+            color: white;
+            padding: 5px;
+            font-weight: bold;
+        }
+
+        .window-content {
+            padding: 10px;
+        }
+
+        .speech-bubble {
+            position: absolute;
+            background: #FFFFCC;
+            border: 1px solid #999999;
+            border-radius: 5px;
+            padding: 10px;
+            max-width: 200px;
+            box-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .speech-bubble:after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            border-width: 10px 10px 0;
+            border-style: solid;
+            border-color: #FFFFCC transparent;
+        }
+
+        #controls {
+            display: flex;
+            gap: 10px;
+            margin-left: 10px;
+        }
+
+        .bonzi {
+            width: 200px;
+            height: 160px;
+            position: absolute;
+            touch-action: none;
+        }
+
+        @keyframes enter {
+            from { transform: scale(0); }
+            to { transform: scale(1); }
+        }
+
+        @keyframes leave {
+            from { transform: scale(1); }
+            to { transform: scale(0); }
+        }
+
+        .bonzi-enter {
+            animation: enter 0.25s ease-out;
+        }
+
+        .bonzi-leave {
+            animation: leave 0.25s ease-in;
+        }
+
+        /* Add to existing CSS */
+        #login-screen {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #ECE9D8;
+            border: 1px solid #0054E3;
+            border-radius: 3px;
+            padding: 20px;
+            box-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .login-box {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .login-box input {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+
+        .login-box button {
+            padding: 10px;
+            background-color: #0054E3;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        .login-box button:hover {
+            background-color: #0041a3;
+        }
+
+        .nametag {
+            position: absolute;
+            background-color: #0054E3;
+            color: white;
+            padding: 3px 5px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-family: Tahoma, sans-serif;
+            z-index: 5;
+        }
+
+        .context-menu {
+            position: absolute;
+            background-color: #fff;
+            border: 1px solid #0054E3;
+            border-radius: 5px;
+            box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+            z-index: 100;
+        }
+
+        .context-menu ul {
+            list-style-type: none;
+            padding: 5px;
+            margin: 0;
+        }
+
+        .context-menu li {
+            padding: 8px 12px;
+            cursor: pointer;
+        }
+
+        .context-menu li:hover {
+            background-color: #0054E3;
+            color: white;
+        }
+    </style>
+
+    <div id="welcome-window" style="display: none;">
+        <div class="window-title">Welcome to Windows XP</div>
+        <div class="window-content">
+            <p>Welcome to BonziWORLD XP!</p>
+            <button onclick="closeWelcome()">OK</button>
+        </div>
+    </div>
+
+    <div id="login-screen" style="display: none;">
+        <div class="login-box">
+            <input type="text" id="nickname" placeholder="Nickname">
+            <input type="text" id="room-id" placeholder="Room ID">
+            <button onclick="login()">Join</button>
+        </div>
+    </div>
+
+    <div id="desktop" style="display: none;">
+        <div id="bonzi-container"></div>
+        <div id="taskbar">
+            <div id="chat-input-container">
+                <input type="text" id="chat-input" placeholder="Type a message...">
+            </div>
+            <div id="controls">
+                <button id="tile-btn">Tile</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let currentUser = null;
+        let sprites = new Map();
+
+        const spriteData = {
+            frames: {
+                width: 200,
+                height: 160
+            },
+            animations: {
+                idle: 0,
+                enter: [277, 302, "idle", 0.25],
+                leave: [16, 39, "idle", 0.25]
+            }
+        };
+
+        // Boot sequence
+        window.onload = () => {
+            setTimeout(() => {
+                document.getElementById('boot-screen').style.display = 'none';
+                document.getElementById('welcome-window').style.display = 'block';
+            }, 3000);
+        };
+
+        function closeWelcome() {
+            document.getElementById('welcome-window').style.display = 'none';
+            document.getElementById('login-screen').style.display = 'flex';
+        }
+
+        function speak(text) {
+            let url = "https://www.tetyys.com/SAPI4/SAPI4?text=" + encodeURIComponent(text) + 
+                      "&voice=" + encodeURIComponent("Adult Male #2, American English (TruVoice)") + "&pitch=150&speed=100";
+            let audio = new Audio(url);
+            audio.play();
+        }
+
+        function createBonzi(id, nickname, position = { x: 100, y: 100 }) {
+            const bonzi = document.createElement('div');
+            bonzi.className = 'bonzi bonzi-enter';
+            bonzi.id = `bonzi-${id}`;
+            bonzi.style.left = `${position.x}px`;
+            bonzi.style.top = `${position.y}px`;
+
+            const canvas = document.createElement('canvas');
+            canvas.width = spriteData.frames.width;
+            canvas.height = spriteData.frames.height;
+            bonzi.appendChild(canvas);
+
+            const stage = new createjs.Stage(canvas);
+            const spriteSheet = new createjs.SpriteSheet({
+                images: ["https://bonziworld.org/img/agents/purple.png"],
+                frames: spriteData.frames,
+                animations: spriteData.animations
+            });
+
+            const sprite = new createjs.Sprite(spriteSheet);
+            stage.addChild(sprite);
+            sprites.set(id, { sprite, stage });
+            sprite.gotoAndPlay("enter");
+
+            const nametag = document.createElement('div');
+            nametag.className = 'nametag';
+            nametag.innerText = nickname;
+            bonzi.appendChild(nametag);
+
+            document.getElementById('bonzi-container').appendChild(bonzi);
+
+            // Make Bonzi draggable (desktop and mobile)
+            bonzi.addEventListener('pointerdown', function(e) {
+                const shiftX = e.clientX - bonzi.getBoundingClientRect().left;
+                const shiftY = e.clientY - bonzi.getBoundingClientRect().top;
+
+                moveAt(e.pageX, e.pageY);
+
+                function moveAt(pageX, pageY) {
+                    bonzi.style.left = pageX - shiftX + 'px';
+                    bonzi.style.top = pageY - shiftY + 'px';
+                    socket.emit('move', { x: pageX - shiftX, y: pageY - shiftY });
+                }
+
+                function onPointerMove(e) {
+                    moveAt(e.pageX, e.pageY);
+                }
+
+                document.addEventListener('pointermove', onPointerMove);
+                document.addEventListener('pointerup', function() {
+                    document.removeEventListener('pointermove', onPointerMove);
+                }, { once: true });
+            });
+
+            bonzi.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+                showContextMenu(e.pageX, e.pageY, id);
+            });
+
+            // Update sprite
+            createjs.Ticker.addEventListener("tick", function() {
+                stage.update();
+            });
+        }
+
+        // Context menu
+        function showContextMenu(x, y, id) {
+            const menu = document.createElement('div');
+            menu.className = 'context-menu';
+            menu.style.left = `${x}px`;
+            menu.style.top = `${y}px`;
+            menu.innerHTML = `
+                <ul>
+                    <li onclick="speak('Hello, I am Bonzi!')">Speak</li>
+                    <li onclick="removeBonzi('${id}')">Remove Bonzi</li>
+                </ul>
+            `;
+            document.body.appendChild(menu);
+
+            document.addEventListener('click', () => {
+                menu.remove();
+            }, { once: true });
+        }
+
+        function removeBonzi(id) {
+            const bonzi = document.getElementById(`bonzi-${id}`);
+            if (bonzi) {
+                bonzi.classList.add('bonzi-leave');
+                setTimeout(() => {
+                    bonzi.remove();
+                    sprites.delete(id);
+                }, 250); // Match the animation duration
+            }
+        }
+
+                    function showSpeechBubble(bonziId, message) {
+                        const bonzi = document.getElementById(bonziId);
+                        if (!bonzi) return;
+
+                        // Create the speech bubble element
+                        const bubble = document.createElement('div');
+                        bubble.className = 'speech-bubble';
+                        bubble.innerText = message;
+
+                        // Position the speech bubble above the Bonzi character
+                        const bonziRect = bonzi.getBoundingClientRect();
+                        bubble.style.left = `${bonziRect.left + bonziRect.width / 2 - 100}px`; // Centered
+                        bubble.style.top = `${bonziRect.top - 50}px`; // Above the Bonzi
+
+                        document.body.appendChild(bubble);
+
+                        // Remove the speech bubble after a delay
+                        setTimeout(() => {
+                            bubble.remove();
+                        }, 3000); // Adjust the duration as needed
+                    }
+
+        function login() {
+            const nickname = document.getElementById('nickname').value.trim();
+            const roomId = document.getElementById('room-id').value.trim();
+
+            if (nickname && roomId) {
+                socket.emit('login', { nickname, roomId });
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('desktop').style.display = 'block';
+            } else {
+                alert('Please enter a valid nickname and room ID.');
+            }
+        }
+
+        // Listen for user joined event
+        socket.on('userJoined', (data) => {
+            createBonzi(data.id, data.nickname);
+            speak(`${data.nickname} has joined the room.`);
+        });
+
+        socket.on('userLeft', (data) => {
+            const bonzi = document.getElementById(`bonzi-${data.id}`);
+            if (bonzi) {
+                bonzi.remove();
+                speak(`${data.nickname} has left the room.`);
+            }
+        });
+
+        // Listen for chat messages
+        socket.on('chat', (data) => {
+            const chatInput = document.getElementById('chat-input');
+            speak(`${data.message}`);
+             showSpeechBubble(`bonzi-${data.id}`, data.message);
+        });
+
+        // Listen for move events
+        socket.on('move', (data) => {
+            const bonzi = document.getElementById(`bonzi-${data.id}`);
+            if (bonzi) {
+                bonzi.style.left = `${data.position.x}px`;
+                bonzi.style.top = `${data.position.y}px`;
+            }
+        });
+
+        // Handle chat input
+        document.getElementById('chat-input').addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                const message = event.target.value;
+                socket.emit('chat', message);
+                event.target.value = '';
+            }
+        });
+
+        // Tile button functionality
+        document.getElementById('tile-btn').addEventListener('click', () => {
+            const bonzis = document.querySelectorAll('.bonzi');
+            bonzis.forEach((bonzi, index) => {
+                bonzi.style.left = `${(index % 3) * 220}px`; // Adjust for 3 columns
+                bonzi.style.top = `${Math.floor(index / 3) * 180}px`; // Adjust for row height
+            });
+        });
+    </script>
+</body>
+</html>

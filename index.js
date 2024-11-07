@@ -7,14 +7,82 @@ app.use(express.static('public'));
 
 const rooms = new Map();
 const users = new Map();
-const DEFAULT_ROOM = 'default'; // Define a default room
+const DEFAULT_ROOM = 'default';
+
+// Handle commands
+function handleCommand(socket, message) {
+    const args = message.slice(1).split(' '); // Remove "/" and split by space
+    const command = args[0].toLowerCase();
+    const user = users.get(socket.id);
+    
+    if (!user) return false;
+
+    switch (command) {
+        case 'name':
+            const newNickname = args.slice(1).join(' ').trim();
+            if (newNickname) {
+                const oldNickname = user.nickname;
+                user.nickname = newNickname;
+                io.to(user.roomId).emit('nameChanged', {
+                    id: socket.id,
+                    oldNickname: oldNickname,
+                    newNickname: newNickname
+                });
+                // Send system message about name change
+                io.to(user.roomId).emit('chat', {
+                    id: 'system',
+                    nickname: 'System',
+                    message: `${oldNickname} changed their name to ${newNickname}`
+                });
+            }
+            return true;
+
+        case 'help':
+            // Send available commands to the user
+            socket.emit('chat', {
+                id: 'system',
+                nickname: 'System',
+                message: 'Available commands:\n' +
+                        '/name <new name> - Change your nickname\n' +
+                        '/help - Show this help message\n' +
+                        '/users - Show users in current room'
+            });
+            return true;
+
+        case 'users':
+            // Get all users in the current room
+            const roomUsers = Array.from(rooms.get(user.roomId) || [])
+                .map(id => users.get(id))
+                .filter(Boolean)
+                .map(u => u.nickname)
+                .join(', ');
+            
+            socket.emit('chat', {
+                id: 'system',
+                nickname: 'System',
+                message: `Users in room: ${roomUsers}`
+            });
+            return true;
+
+        default:
+            socket.emit('chat', {
+                id: 'system',
+                nickname: 'System',
+                message: 'Unknown command. Type /help for available commands.'
+            });
+            return true;
+    }
+}
 
 io.on('connection', (socket) => {
-    console.log('User  connected');
+    console.log('User connected');
 
     // Automatically assign users to the default room
     socket.join(DEFAULT_ROOM);
-    users.set(socket.id, { nickname: `User ${socket.id.substring(0, 4)}`, roomId: DEFAULT_ROOM }); // Default nickname
+    users.set(socket.id, { 
+        nickname: `User${Math.floor(Math.random() * 1000)}`, 
+        roomId: DEFAULT_ROOM 
+    });
 
     if (!rooms.has(DEFAULT_ROOM)) {
         rooms.set(DEFAULT_ROOM, new Set());
@@ -28,15 +96,31 @@ io.on('connection', (socket) => {
 
     socket.on('login', (data) => {
         const { nickname, roomId } = data;
-        users.set(socket.id, { nickname, roomId });
-        socket.join(roomId);
-
-        if (!rooms.has(roomId)) {
-            rooms.set(roomId, new Set());
+        const targetRoom = roomId || DEFAULT_ROOM;
+        
+        // Leave current room
+        const currentUser = users.get(socket.id);
+        if (currentUser) {
+            const currentRoom = rooms.get(currentUser.roomId);
+            if (currentRoom) {
+                currentRoom.delete(socket.id);
+                if (currentRoom.size === 0) {
+                    rooms.delete(currentUser.roomId);
+                }
+            }
+            socket.leave(currentUser.roomId);
         }
-        rooms.get(roomId).add(socket.id);
 
-        io.to(roomId).emit('userJoined', {
+        // Join new room
+        users.set(socket.id, { nickname, roomId: targetRoom });
+        socket.join(targetRoom);
+
+        if (!rooms.has(targetRoom)) {
+            rooms.set(targetRoom, new Set());
+        }
+        rooms.get(targetRoom).add(socket.id);
+
+        io.to(targetRoom).emit('userJoined', {
             id: socket.id,
             nickname: nickname
         });
@@ -44,13 +128,20 @@ io.on('connection', (socket) => {
 
     socket.on('chat', (message) => {
         const user = users.get(socket.id);
-        if (user) {
-            io.to(user.roomId).emit('chat', {
-                id: socket.id,
-                nickname: user.nickname,
-                message: message
-            });
+        if (!user) return;
+
+        // Handle commands
+        if (message.startsWith('/')) {
+            handleCommand(socket, message);
+            return;
         }
+
+        // Regular chat message
+        io.to(user.roomId).emit('chat', {
+            id: socket.id,
+            nickname: user.nickname,
+            message: message
+        });
     });
 
     socket.on('move', (position) => {
@@ -59,18 +150,6 @@ io.on('connection', (socket) => {
             io.to(user.roomId).emit('move', {
                 id: socket.id,
                 position: position
-            });
-        }
-    });
-
-    // Handle nickname change
-    socket.on('name', (newNickname) => {
-        const user = users.get(socket.id);
-        if (user) {
-            user.nickname = newNickname; // Update the nickname
-            io.to(user.roomId).emit('nameChanged', {
-                id: socket.id,
-                nickname: newNickname
             });
         }
     });

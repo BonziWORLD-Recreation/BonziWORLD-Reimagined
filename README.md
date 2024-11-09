@@ -3,6 +3,6 @@
 
 Made By ItzFafaelScout (me!), GEOEGII555, Kelbaz, mvoolt, Elephpant, Pikterra32, mallory and RixInGithub and more...
 
-See some progress here: https://bonziworld-recreation.github.io/BonziWORLD-Reimagined/
+See some progress here: https://bonziworld-recreation.github.io/BonziWORLD-Reimagined/public
 
-0% complete
+0.00001% complete
